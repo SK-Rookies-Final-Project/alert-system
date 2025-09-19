@@ -125,8 +125,8 @@ public class AlertSystemApplication {
     private static void sendEmail(String to, String subject, String body) {
         final String smtpHost = "smtp.gmail.com";
         final int smtpPort = 587;
-        final String username = "your-email@gmail.com";
-        final String password = "your-app-password";
+        final String username = "a3d3m3i3n@gmail.com";
+        final String password = "a1234567!";
 
         // ---------------------------------------------
 
