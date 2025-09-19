@@ -1,0 +1,81 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.gradleup.shadow' version '8.3.6'
+}
+
+group = 'kafka.producer'
+version = '1.0'
+description = "Flink Kafka Unauthorized Log Processor"
+mainClassName = 'kafka.producer.Flink_unauthorized'
+
+ext {
+    javaVersion = '17'
+    flinkVersion = '1.20.0'
+    kafkaClientVersion = '3.4.0'
+    flinkConnectorKafkaVersion = '3.4.0-1.20'
+    flinkFormatsAvroConfluentVersion = '1.20.0'
+    jacksonVersion = '2.17.2'
+    avroVersion    = '1.11.3'
+    confluentVersion = '7.7.1'
+    log4jVersion = '2.24.1'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://packages.confluent.io/maven"
+    }
+}
+
+dependencies {
+    // Flink 클러스터가 제공하므로 JAR 파일에 포함하지 않을 라이브러리
+    compileOnly "org.apache.flink:flink-streaming-java:${flinkVersion}"
+    compileOnly "org.apache.flink:flink-clients:${flinkVersion}"
+    compileOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
+    compileOnly "org.apache.logging.log4j:log4j-api:${log4jVersion}"
+    compileOnly "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    // LinkageError의 핵심 원인이었던 avro 라이브러리를 compileOnly로 변경
+    compileOnly "org.apache.avro:avro:${avroVersion}"
+
+    // Flink 작업 JAR 파일에 포함되어야 할 라이브러리
+    implementation "org.apache.flink:flink-connector-kafka:${flinkConnectorKafkaVersion}"
+    implementation "org.apache.flink:flink-avro-confluent-registry:${flinkFormatsAvroConfluentVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation("io.confluent:kafka-avro-serializer:${confluentVersion}") {
+        exclude group: 'org.apache.kafka', module: 'kafka-clients'
+    }
+    implementation("io.confluent:kafka-schema-registry-client:${confluentVersion}") {
+        exclude group: 'org.apache.kafka', module: 'kafka-clients'
+    }
+
+    // ✅ ADDED: 이메일 발송 기능에 필요한 JavaMail API 라이브러리
+    implementation 'javax.mail:javax.mail-api:1.6.2'
+    implementation 'com.sun.mail:javax.mail:1.6.2'
+}
+
+application {
+    mainClass = mainClassName
+}
+
+// Shadow JAR 설정: implementation 의존성을 포함하여 fat-jar 생성
+shadowJar {
+    archiveBaseName.set("Flink_unauthorized_avro")
+    archiveClassifier.set('')
+    mergeServiceFiles()
+    // fat JAR에 kafka-clients가 포함되지 않도록 제외
+    exclude 'org/apache/kafka/**'
+}
